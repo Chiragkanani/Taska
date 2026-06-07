@@ -9,6 +9,9 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  // Return DATE/DATETIME/TIMESTAMP as strings so a DATE like due_date stays
+  // 'YYYY-MM-DD' instead of being shifted across timezones when serialized.
+  dateStrings: true,
 });
 
 const db = pool.promise();

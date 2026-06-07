@@ -9,6 +9,12 @@ export const useTodoStore = defineStore('todos', {
   getters: {
     completedCount: (state) => state.items.filter((t) => t.is_completed).length,
     pendingCount: (state) => state.items.filter((t) => !t.is_completed).length,
+    overdueCount: (state) => {
+      const today = new Date().toISOString().slice(0, 10);
+      return state.items.filter(
+        (t) => !t.is_completed && t.due_date && t.due_date < today
+      ).length;
+    },
   },
   actions: {
     async fetchTodos() {
@@ -40,12 +46,10 @@ export const useTodoStore = defineStore('todos', {
       }
     },
 
-    async toggleTodo(todo) {
+    async updateTodo(id, payload) {
       try {
-        const { data } = await api.put(`/todos/${todo.id}`, {
-          is_completed: !todo.is_completed,
-        });
-        const idx = this.items.findIndex((t) => t.id === todo.id);
+        const { data } = await api.put(`/todos/${id}`, payload);
+        const idx = this.items.findIndex((t) => t.id === id);
         if (idx !== -1) this.items[idx] = data.data.todo;
         return { success: true };
       } catch (err) {
@@ -54,6 +58,10 @@ export const useTodoStore = defineStore('todos', {
           message: err.response?.data?.message || 'Failed to update todo',
         };
       }
+    },
+
+    async toggleTodo(todo) {
+      return this.updateTodo(todo.id, { is_completed: !todo.is_completed });
     },
 
     async deleteTodo(id) {

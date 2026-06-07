@@ -51,6 +51,19 @@ Or from inside a MySQL shell (any OS):
 SOURCE D:/Dev-Ops/Taska/backend/taska.sql;
 ```
 
+### Migrations (existing databases)
+
+If you already created the database with an earlier schema, apply the
+incremental migrations in `backend/migrations/` instead of re-importing
+`taska.sql` (which would not alter existing tables). They are additive and
+safe to re-run:
+
+```powershell
+Get-Content backend/migrations/002_task_fields.sql | mysql -u root -p taska
+```
+
+`002_task_fields.sql` adds `priority`, `due_date`, and `updated_at` to `todos`.
+
 ---
 
 ## 2. Backend setup
@@ -91,6 +104,11 @@ The API runs at `http://localhost:5000`. Health check: `GET http://localhost:500
 | POST   | `/api/todos`         | Yes  | Create a todo      |
 | PUT    | `/api/todos/:id`     | Yes  | Update a todo      |
 | DELETE | `/api/todos/:id`     | Yes  | Delete a todo      |
+
+A todo has these fields: `title` (required), `description`, `priority`
+(`low` \| `medium` \| `high`, default `medium`), `due_date` (`YYYY-MM-DD` or
+null), `is_completed`, plus `created_at` / `updated_at`. `POST` and `PUT`
+accept `title`, `description`, `priority`, `due_date`, and `is_completed`.
 
 All responses use a consistent shape:
 

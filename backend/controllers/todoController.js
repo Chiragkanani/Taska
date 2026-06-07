@@ -1,20 +1,38 @@
 const { validationResult } = require('express-validator');
 const db = require('../config/db');
 
+const TODO_COLUMNS =
+  'id, user_id, title, description, is_completed, priority, due_date, created_at, updated_at';
+
+// Normalize a DB row into the JSON shape the client expects.
+function serializeTodo(row) {
+  return { ...row, is_completed: !!row.is_completed };
+}
+
+// Coerce an incoming due_date into 'YYYY-MM-DD' or null.
+function normalizeDueDate(value) {
+  if (value === undefined || value === null || value === '') return null;
+  return String(value).slice(0, 10);
+}
+
 // GET /api/todos
 exports.getTodos = async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT id, user_id, title, description, is_completed, created_at FROM todos WHERE user_id = ? ORDER BY created_at DESC',
+      `SELECT ${TODO_COLUMNS} FROM todos
+       WHERE user_id = ?
+       ORDER BY is_completed ASC,
+                CASE WHEN due_date IS NULL THEN 1 ELSE 0 END,
+                due_date ASC,
+                FIELD(priority, 'high', 'medium', 'low'),
+                created_at DESC`,
       [req.user.id]
     );
-
-    const todos = rows.map((t) => ({ ...t, is_completed: !!t.is_completed }));
 
     return res.json({
       success: true,
       message: 'Todos fetched successfully',
-      data: { todos },
+      data: { todos: rows.map(serializeTodo) },
     });
   } catch (err) {
     console.error('Get todos error:', err.message);
@@ -37,25 +55,29 @@ exports.createTodo = async (req, res) => {
     });
   }
 
-  const { title, description } = req.body;
+  const { title, description, priority, due_date } = req.body;
 
   try {
     const [result] = await db.query(
-      'INSERT INTO todos (user_id, title, description) VALUES (?, ?, ?)',
-      [req.user.id, title, description || null]
+      'INSERT INTO todos (user_id, title, description, priority, due_date) VALUES (?, ?, ?, ?, ?)',
+      [
+        req.user.id,
+        title,
+        description || null,
+        priority || 'medium',
+        normalizeDueDate(due_date),
+      ]
     );
 
     const [rows] = await db.query(
-      'SELECT id, user_id, title, description, is_completed, created_at FROM todos WHERE id = ?',
+      `SELECT ${TODO_COLUMNS} FROM todos WHERE id = ?`,
       [result.insertId]
     );
-
-    const todo = { ...rows[0], is_completed: !!rows[0].is_completed };
 
     return res.status(201).json({
       success: true,
       message: 'Todo created successfully',
-      data: { todo },
+      data: { todo: serializeTodo(rows[0]) },
     });
   } catch (err) {
     console.error('Create todo error:', err.message);
@@ -79,11 +101,11 @@ exports.updateTodo = async (req, res) => {
   }
 
   const todoId = req.params.id;
-  const { title, description, is_completed } = req.body;
+  const { title, description, is_completed, priority, due_date } = req.body;
 
   try {
     const [existing] = await db.query(
-      'SELECT id, title, description, is_completed FROM todos WHERE id = ? AND user_id = ?',
+      `SELECT ${TODO_COLUMNS} FROM todos WHERE id = ? AND user_id = ?`,
       [todoId, req.user.id]
     );
 
@@ -101,23 +123,34 @@ exports.updateTodo = async (req, res) => {
       description !== undefined ? description : current.description;
     const newCompleted =
       is_completed !== undefined ? (is_completed ? 1 : 0) : current.is_completed;
+    const newPriority = priority !== undefined ? priority : current.priority;
+    const newDueDate =
+      due_date !== undefined ? normalizeDueDate(due_date) : current.due_date;
 
     await db.query(
-      'UPDATE todos SET title = ?, description = ?, is_completed = ? WHERE id = ? AND user_id = ?',
-      [newTitle, newDescription, newCompleted, todoId, req.user.id]
+      `UPDATE todos
+       SET title = ?, description = ?, is_completed = ?, priority = ?, due_date = ?
+       WHERE id = ? AND user_id = ?`,
+      [
+        newTitle,
+        newDescription,
+        newCompleted,
+        newPriority,
+        newDueDate,
+        todoId,
+        req.user.id,
+      ]
     );
 
     const [rows] = await db.query(
-      'SELECT id, user_id, title, description, is_completed, created_at FROM todos WHERE id = ?',
+      `SELECT ${TODO_COLUMNS} FROM todos WHERE id = ?`,
       [todoId]
     );
-
-    const todo = { ...rows[0], is_completed: !!rows[0].is_completed };
 
     return res.json({
       success: true,
       message: 'Todo updated successfully',
-      data: { todo },
+      data: { todo: serializeTodo(rows[0]) },
     });
   } catch (err) {
     console.error('Update todo error:', err.message);

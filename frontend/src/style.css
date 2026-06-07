@@ -31,11 +31,23 @@ body {
   .input {
     @apply block w-full rounded-lg border-0 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-brand-500;
   }
+  .select {
+    @apply block w-full cursor-pointer appearance-none rounded-lg border-0 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-brand-500;
+  }
   .label {
     @apply mb-1.5 block text-sm font-medium text-slate-700;
   }
   .card {
     @apply rounded-2xl bg-white shadow-sm ring-1 ring-slate-200;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium;
+  }
+  .stat-card {
+    @apply flex flex-col gap-0.5 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200;
   }
 }
 

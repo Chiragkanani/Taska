@@ -17,7 +17,17 @@ router.get('/', getTodos);
 
 router.post(
   '/',
-  [body('title').trim().notEmpty().withMessage('Title is required')],
+  [
+    body('title').trim().notEmpty().withMessage('Title is required'),
+    body('priority')
+      .optional()
+      .isIn(['low', 'medium', 'high'])
+      .withMessage('Priority must be low, medium, or high'),
+    body('due_date')
+      .optional({ values: 'falsy' })
+      .isISO8601()
+      .withMessage('Due date must be a valid date'),
+  ],
   createTodo
 );
 
@@ -33,6 +43,14 @@ router.put(
       .optional()
       .isBoolean()
       .withMessage('is_completed must be a boolean'),
+    body('priority')
+      .optional()
+      .isIn(['low', 'medium', 'high'])
+      .withMessage('Priority must be low, medium, or high'),
+    body('due_date')
+      .optional({ values: 'falsy' })
+      .isISO8601()
+      .withMessage('Due date must be a valid date'),
   ],
   updateTodo
 );
